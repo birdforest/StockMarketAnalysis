@@ -1,0 +1,210 @@
+Sub RunAnalysisOnWorksheets()
+    
+    Dim ws As Worksheet
+    ' Call the StockMarketAnalysis subroutine for each worksheet
+    For Each ws In ThisWorkbook.Worksheets
+    
+        StockMarketAnalysis ws
+    
+    Next ws
+    
+    
+End Sub
+
+Sub StockMarketAnalysis(ws As Worksheet)
+       
+        ws.Range("I1").Value = "Ticker"
+        ws.Range("J1").Value = "Yearly Change"
+        ws.Range("K1").Value = "Percent Change"
+        ws.Range("L1").Value = "Total Stock Volume"
+        ws.Range("O1").Value = "Count Per Ticker"
+        ws.Range("Q2").Value = "Greatest % Increase"
+        ws.Range("Q3").Value = "Greatest % Decrease"
+        ws.Range("Q4").Value = "Greatest Total Volume"
+        ws.Range("R1").Value = "Ticker"
+        ws.Range("S1").Value = "Value"
+        
+        Dim Row As Long
+        Dim counter As Integer
+        Dim counter2 As Integer
+        Dim counter3 As Integer
+        Dim counter4 As Integer
+        Dim RowCount As Long
+        Dim YearlyChange As Double
+        Dim PercentageChange As Double
+        Dim PCC, GIConversion, GDConversion As Double
+        Dim FPC As Double
+        Dim formattedPercentage, formattedPercentage1, formattedPercentage2 As String
+        Dim formattedFirstPercentage As String
+        Dim total_stock_volume As Double
+        Dim MaxValue, MinValue, MaxVolume As Double
+        Dim cell As Range
+        Dim dataRange3, dataRange1, datarange2 As Range
+        Dim lastRow As Long
+        Dim MaxRow, MinRow, MaxVRow As Long
+        
+        
+        ' Initialize counter to start from row 3 for Ticker
+        counter = 3
+        ' Initialize counter2 to start from row 3 for Yearly Change
+        counter2 = 2
+        ' Initialize counter3 to start from row 3 for Percent Change
+        counter3 = 3
+        ' Initialize counter4 to start from row 3 for total stock volume
+        counter4 = 2
+        ' Write a sample value in cell I2
+        ws.Cells(2, 9).Value = "AAB"
+    
+        ' Loop through each row from row 2 to the last non-empty row in column 1
+        For Row = 2 To ws.Cells(Rows.Count, 1).End(xlUp).Row
+        ' Check if the value in the next row is different from the current row
+            If ws.Cells(Row + 1, 1).Value <> ws.Cells(Row, 1).Value Then
+            ' If different, write the value to column 9 starting from row 'counter'
+            ws.Cells(counter, 9).Value = ws.Cells(Row + 1, 1).Value
+            ' Increment counter to write the next unique value in the next row
+            counter = counter + 1
+            End If
+        Next Row
+        
+        ' Loop through each row from RowCount 2 to the last non-empty row in column 1
+        For RowCount = 2 To ws.Cells(Rows.Count, 1).End(xlUp).Row
+             ' Check if the value in the next row is different from the current row
+            If ws.Cells(RowCount + 1, 1).Value <> ws.Cells(RowCount, 1).Value Then
+             ' If different, write the value to Cell O2 to indicate the # of rows per ticker
+                ws.Cells(2, 15).Value = RowCount - 1
+                Exit For
+            End If
+        Next RowCount
+        
+        ' Loop through each row from row 2 to the last non-empty row in column 1
+        For Row = 2 To ws.Cells(Rows.Count, 1).End(xlUp).Row
+            ' Check if the value in the next row is different from the current row
+            If ws.Cells(Row + 1, 1).Value <> ws.Cells(Row, 1).Value Then
+                ' Yearly Change is calculated by subtracting the closing price at the end of the year from the opening price at the beginning of the year
+                YearlyChange = ws.Cells(Row, 6).Value - ws.Cells(Row - ws.Range("O2").Value + 1, 3).Value
+                ws.Cells(counter2, 10).Value = YearlyChange
+                ' Increment counter2 to write the next unique value in the next row
+                counter2 = counter2 + 1
+            End If
+        Next Row
+        
+        ' First Ticker Percent Change is calculated by dividing the corresponding Yearly Change by that of the opening price at the beginning of the year
+        FirstPercentChange = ws.Cells(2, 10).Value / ws.Cells(2, 3).Value
+        ' Transform FPC (First Percentage Change) to percentage form Part 1
+        FPC = FirstPercentChange * 100
+        ' Transform FPC (First Percentage Change) to percentage form Part 2
+        formattedFirstPercentage = Format(FPC, "0.00") & "%"
+        ws.Cells(2, 11).Value = formattedFirstPercentage
+        
+        ' Loop through each row from row 2 to the last non-empty row in column 1
+        For Row = 2 To ws.Cells(Rows.Count, 1).End(xlUp).Row
+            ' Check if the value in the next row is different from the current row
+            If ws.Cells(Row + 1, 1).Value <> ws.Cells(Row, 1).Value Then
+                ' Percentage Change is calculated by dividing the Yearly Change by the the opening price of the beginning year of that ticker
+                PercentageChange = ws.Cells(counter3, 10).Value / ws.Cells(Row + 1, 3).Value
+                'On Error Resume Next <- Used this to resolve the overflow issue
+                ' Transform PCC (Percent Change Calculation) to Percentage Part 1
+                PCC = PercentageChange * 100
+                ' Transform PCC (Percent Change Calculation) to Percentage Part 2
+                formattedPercentage = Format(PCC, "0.00") & "%"
+                ws.Cells(counter3, 11) = formattedPercentage
+                ' Increment counter3 to write the next unique value in the next row
+                counter3 = counter3 + 1
+            ' Exit the loop once Row + 1 eqauls the last row
+            ElseIf Row + 1 = ws.Cells(Rows.Count, 1).End(xlUp).Row Then
+                Exit For
+            End If
+            
+        Next Row
+        ' stock volume starts with 0
+        total_stock_volume = 0
+        ' Loop through each row from row 2 to the last non-empty row in column 1
+        For Row = 2 To ws.Cells(Rows.Count, 1).End(xlUp).Row
+            ' Check if the value in the next row is same with the current row
+            If ws.Cells(Row + 1, 1).Value = ws.Cells(Row, 1).Value Then
+                'If the previous statement is true, keep accumulating the value
+                total_stock_volume = total_stock_volume + ws.Cells(Row, 7).Value
+            ' Check if the value in the next row is different from the current row
+            ElseIf ws.Cells(Row + 1, 1).Value <> ws.Cells(Row, 1).Value Then
+                'If the values are different, write the accumulated total to column L
+                ws.Cells(counter4, 12) = total_stock_volume + ws.Cells(Row, 7)
+                'reset the total stock volume
+                total_stock_volume = 0
+                'Increment counter4 to write the next unique value in the next row
+                counter4 = counter4 + 1
+            End If
+        Next Row
+        'Find the last non-empty row in column A
+        lastRow = ws.Cells(Rows.Count, 1).End(xlUp).Row
+        'Cover cells from row 2 to the last non-empty row in column K
+        Set dataRange1 = ws.Range("K2:K" & lastRow)
+        'Cover cells from row 2 to the last non-empty row in column L
+        Set datarange2 = ws.Range("L2:L" & lastRow)
+        'Cover cells from row 2 to the last non-empty row in column J
+        Set dataRange3 = ws.Range("J2:J" & lastRow)
+        'Start MaxRow at row 2 for greatest % Increase
+        MaxRow = 2
+        'Start MaxVRow at row 2 for Greatest Total Volume
+        MaxVRow = 2
+        ' Cover all the cells in this data range
+        For Each cell In dataRange1
+            'The condition checks if the current cell value is larger than the current maximum value
+            If cell.Value > MaxValue Then
+                'If so, update the variable and it becomes the new maximum value
+                MaxValue = cell.Value
+                'Show the row that contains the new maximum value
+                MaxRow = cell.Row
+            End If
+        Next cell
+        ' Greatest % Increase Conversion (Same as Above) and corresponding Ticker
+        GIConversion = MaxValue * 100
+        formattedPercentage1 = Format(GIConversion, "0.00") & "%"
+        ws.Cells(2, 19).Value = formattedPercentage1
+        ws.Cells(2, 18).Value = ws.Cells(MaxRow, 9)
+        
+        ' Cover all the cells in this data range
+        For Each cell In dataRange1
+            'The condition checks if the current cell value is smaller than the current minimum value
+            If cell.Value < MinValue Then
+                'If so, update the variable and it becomes the new minimum value
+                MinValue = cell.Value
+                'Show the row that contains the new minimum value
+                MinRow = cell.Row
+            End If
+        Next cell
+        ' Greatest % Decrease Conversion (Same as Above) and correspnding Ticker
+        GDConversion = MinValue * 100
+        formattedPercentage2 = Format(GDConversion, "0.00") & "%"
+        ws.Cells(3, 19).Value = formattedPercentage2
+        ws.Cells(3, 18).Value = ws.Cells(MinRow, 9)
+            
+        ' Cover all the cells in this data range
+        For Each cell In datarange2
+            'The condition checks if the current cell value is larger than the current maximum value
+            If cell.Value > MaxVolume Then
+                'If so, update the variable and it becomes the new maximum value
+                MaxVolume = cell.Value
+                'Show the row that contains the new maximum value
+                MaxVRow = cell.Row
+            End If
+        'Display results for Greatest Total Volume and corresponding Ticker
+        ws.Cells(4, 19).Value = MaxVolume
+        ws.Cells(4, 18).Value = ws.Cells(MaxVRow, 9)
+            
+        Next cell
+        
+        ' Loop through each row from row 2 to the last non-empty row in column
+        For Row = 2 To lastRow
+            ' Condition Formatting checking for positive values in Yearly Change Column
+            If ws.Cells(Row, 10) > 0 Then
+                    ' Highlight positive change in green for both Yearly Change and Percent Change Column
+                    ws.Cells(Row, 10).Interior.Color = RGB(0, 255, 0)
+                    ws.Cells(Row, 11).Interior.Color = RGB(0, 255, 0)
+            ' Condition Formatting checking for negative values in Yearly Change Column
+            ElseIf ws.Cells(Row, 10) < 0 Then
+                    ' Highlight negative change in red for both Yearly Change and Percent Change Column
+                    ws.Cells(Row, 10).Interior.Color = RGB(255, 0, 0)
+                    ws.Cells(Row, 11).Interior.Color = RGB(255, 0, 0)
+            End If
+        Next Row
+End Sub
